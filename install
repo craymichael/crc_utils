@@ -1,0 +1,2 @@
+#!/bin/bash
+cp crc_blame.py ~/.local/bin
