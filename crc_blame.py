@@ -157,9 +157,14 @@ cast(df_nodes, 'hl:m_gpu', float)
 cast(df_jobs, 'slots', float)
 cast(df_jobs, 'gpu_card', float)
 
+try:
+    disp_width = os.get_terminal_size().columns
+except OSError:
+    disp_width = None
+
 with pd.option_context('display.max_rows', None,
                        'display.max_columns', None,
-                       'display.width', os.get_terminal_size().columns):
+                       'display.width', disp_width):
     '''
     for queue, df_q in df_jobs.groupby('master_queue'):
         hostname = queue.split('@', 1)[1]
@@ -193,24 +198,26 @@ with pd.option_context('display.max_rows', None,
     node_stats['avail_gpus'] = df_nodes['hc:gpu_card']
     node_stats['used_gpus'] = df_nodes['hl:m_gpu'] - df_nodes['hc:gpu_card']
 
-    print('{} Most Slots'.format(args.top_k))
+    print('Top {} slots by user'.format(args.top_k))
     print(job_stats.sort_values(by=['tot_slots', 'tot_gpu'],
                                 ascending=False).head(args.top_k).reset_index(
                                 drop=True).to_string(index=False))
 
-    print('\n{} Most GPUs'.format(args.top_k))
+    print('\nTop {} GPUs by user'.format(args.top_k))
     print(job_stats.sort_values(by=['tot_gpu', 'tot_slots'],
                                 ascending=False).head(args.top_k).reset_index(
                                 drop=True).to_string(index=False))
 
-    print('\n{} Most Free Slots ({} free total)'.format(
-        args.top_k, node_stats['avail_slots'].sum()))
+    print('\nTop {} free slots by node ({}/{} free total)'.format(
+        args.top_k, node_stats['avail_slots'].sum(),
+        node_stats['used_slots'].sum() + node_stats['avail_slots'].sum()))
     print(node_stats.sort_values(by=['avail_slots', 'avail_gpus'],
                                  ascending=False).head(args.top_k).reset_index(
                                  drop=True).to_string(index=False))
 
-    print('\n{} Most Free GPUs ({} free total)'.format(
-        args.top_k, node_stats['avail_gpus'].sum()))
+    print('\nTop {} free GPUs by node ({}/{} free total)'.format(
+        args.top_k, node_stats['avail_gpus'].sum(),
+        node_stats['used_gpus'].sum() + node_stats['avail_gpus'].sum()))
     print(node_stats.sort_values(by=['avail_gpus', 'avail_slots'],
                                  ascending=False).head(args.top_k).reset_index(
                                  drop=True).to_string(index=False))
