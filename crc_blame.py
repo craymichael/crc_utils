@@ -23,6 +23,10 @@ parser.add_argument(
     type=queue_t
 )
 parser.add_argument(
+    '--user', '-u', help=('Show only resources available to this user, '
+                          'otherwise show for all users.'),
+)
+parser.add_argument(
     '--top-k', '-k', help='Show k top users of resources (Default: 15)',
     type=int, default=10
 )
@@ -38,7 +42,11 @@ except ImportError:
              'Python {}\nExecutable: {}\nLibrary paths: {}'.format(
                  sys.version, sys.executable, sys.path))
 
-result = subprocess.run(['qstat', '-F', '-r'], capture_output=True)
+qstat_cmd = ['qstat', '-F', '-r']
+if args.user:
+    qstat_cmd.extend(['-U', args.user])
+
+result = subprocess.run(qstat_cmd, capture_output=True)
 data = result.stdout.decode('UTF-8')
 # remove pending jobs
 data = data.split('#' * 79 + '\n' + ' - PENDING JOBS')[0]
