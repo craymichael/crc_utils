@@ -197,6 +197,8 @@ with pd.option_context('display.max_rows', None,
         job_stats.append(row)
 
     job_stats = pd.DataFrame(job_stats)
+    cast(job_stats, 'tot_gpu', int)
+    cast(job_stats, 'tot_slots', int)
 
     node_stats = pd.DataFrame()
     node_stats['queuename'] = df_nodes['queuename']
@@ -205,6 +207,14 @@ with pd.option_context('display.max_rows', None,
     node_stats['used_slots'] = df_nodes['used'] + df_nodes['resv']
     node_stats['avail_gpus'] = df_nodes['hc:gpu_card']
     node_stats['used_gpus'] = df_nodes['hl:m_gpu'] - df_nodes['hc:gpu_card']
+    node_stats.fillna({
+        'avail_gpus': 0,
+        'used_gpus': 0,
+    }, inplace=True)
+    cast(node_stats, 'avail_slots', int)
+    cast(node_stats, 'used_slots', int)
+    cast(node_stats, 'avail_gpus', int)
+    cast(node_stats, 'used_gpus', int)
 
     print('Top {} slots by user'.format(args.top_k))
     print(job_stats.sort_values(by=['tot_slots', 'tot_gpu'],
