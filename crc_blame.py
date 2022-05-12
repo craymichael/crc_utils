@@ -27,7 +27,7 @@ parser.add_argument(
                           'otherwise show for all users.'),
 )
 parser.add_argument(
-    '--top-k', '-k', help='Show k top users of resources (Default: 15)',
+    '--top-k', '-k', help='Show k top users of resources (Default: 10)',
     type=int, default=10
 )
 
