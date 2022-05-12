@@ -1,2 +1,3 @@
 #!/bin/bash
+mkdir -p ~/.local/bin
 cp crc_blame.py ~/.local/bin
