@@ -3,6 +3,7 @@ import subprocess
 import re
 import os
 import argparse
+from datetime import datetime
 from collections import OrderedDict
 
 parser = argparse.ArgumentParser(
@@ -29,6 +30,10 @@ parser.add_argument(
 parser.add_argument(
     '--top-k', '-k', help='Show k top users of resources (Default: 10)',
     type=int, default=10
+)
+parser.add_argument(
+    '--logdir', help='Directory to log results of the query (Default: None)',
+    default=None
 )
 
 args = parser.parse_args()
@@ -239,3 +244,13 @@ with pd.option_context('display.max_rows', None,
     print(node_stats.sort_values(by=['avail_gpus', 'avail_slots'],
                                  ascending=False).head(args.top_k).reset_index(
                                  drop=True).to_string(index=False))
+
+if args.logdir:
+    time_str = datetime.now().isoformat(timespec='seconds').replace(':', '_')
+    logdir_full = os.path.join(args.logdir, time_str)
+    os.makedirs(logdir_full, exist_ok=True)
+    df_nodes.to_csv(os.path.join(logdir_full, 'nodes.csv'), index=False)
+    df_jobs.to_csv(os.path.join(logdir_full, 'jobs.csv'), index=False)
+    job_stats.to_csv(os.path.join(logdir_full, 'job_stats.csv'), index=False)
+    node_stats.to_csv(os.path.join(logdir_full, 'node_stats.csv'), index=False)
+    print('\nWrote results to "{}"'.format(logdir_full))
