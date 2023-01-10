@@ -10,11 +10,13 @@ parser = argparse.ArgumentParser(
     description='Show top users of CRC resources.'
 )
 
+
 def queue_t(value):
     if not value.startswith('@'):
         raise argparse.ArgumentTypeError('Queue (host group) name must start '
                                          'with @')
     return value
+
 
 parser.add_argument(
     '--queue', '-q', help=('Show only resources for this queue (host group), '
@@ -68,6 +70,7 @@ assert header == expected_header
 job_header = ['id', 'priority', 'name', 'user', 'status', 'date', 'time',
               'slots']
 
+
 def handle_hard_resource(value, job, cur_value=None):
     value = value.strip()
     if value:
@@ -85,6 +88,10 @@ def handle_hard_resource(value, job, cur_value=None):
     else:
         job['hard_resources'] = job.get('hard_resources', {})
 
+
+unsupported_lines = {
+    'slots=1 (default)'
+}
 nodes = []
 jobs = []
 for section in data[1:]:
@@ -92,14 +99,14 @@ for section in data[1:]:
     sec_jobs = []
     for line in section.split('\n'):
         # print('{: 3d} {}'.format(len(line), line))  # debugging
-        if not line:
+        if not line or line.strip() in unsupported_lines:
             continue
         if re.match(r'^\t[^\s]', line):  # node resources
             name_val = line.split('=', 1)
             assert len(name_val) == 2, line
             name, value = name_val
             sec_data[name.strip()] = value.strip()
-        elif re.match(r'^ {7}[^\s]', line):  # job details (under a job)
+        elif re.match(r'^ {7}[^\s\d]', line):  # job details (under a job)
             assert sec_jobs
             job = sec_jobs[-1]
             name_val = line.split(':', 1)
@@ -127,7 +134,7 @@ for section in data[1:]:
                 handle_hard_resource(value, job, job['hard_resources'])
             else:
                 raise NotImplementedError(
-                    'Job header {}'.format(last_header))
+                    'Job header {}'.format(last_headers))
         elif line[0] != ' ':  # node information
             for i, (name, value) in enumerate(zip(header, line.split())):
                 if i == 2:  # resv/used/tot.
@@ -142,8 +149,10 @@ for section in data[1:]:
     nodes.append(sec_data)
     jobs.extend(sec_jobs)
 
+
 def cast(df, name, type_):
     df.loc[:, name] = df.loc[:, name].astype(type_)
+
 
 df_nodes = pd.DataFrame(nodes)
 df_jobs = pd.DataFrame(jobs)
