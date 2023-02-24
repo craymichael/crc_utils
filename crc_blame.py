@@ -256,7 +256,15 @@ with pd.option_context('display.max_rows', None,
 
 if args.logdir:
     time_str = datetime.now().isoformat(timespec='seconds').replace(':', '_')
-    logdir_full = os.path.join(args.logdir, time_str)
+    sub_logdirs = os.listdir(args.logdir) if os.path.isdir(args.logdir) else []
+    if not sub_logdirs:
+        latest_logdir = '0'
+    else:
+        latest_logdir = str(max(map(int, sub_logdirs)))
+    logdir_base = os.path.join(args.logdir, latest_logdir)
+    if os.path.isdir(logdir_base) and len(os.listdir(logdir_base)) >= 10000:
+        logdir_base = os.path.join(args.logdir, str(int(latest_logdir) + 1))
+    logdir_full = os.path.join(logdir_base, time_str)
     os.makedirs(logdir_full, exist_ok=True)
     df_nodes.to_csv(os.path.join(logdir_full, 'nodes.csv'), index=False)
     df_jobs.to_csv(os.path.join(logdir_full, 'jobs.csv'), index=False)
