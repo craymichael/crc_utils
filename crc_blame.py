@@ -68,7 +68,7 @@ assert len(header) == 6, data[0]
 assert header == expected_header
 
 job_header = ['id', 'priority', 'name', 'user', 'status', 'date', 'time',
-              'slots']
+              'slots', 'task_id']
 
 
 def handle_hard_resource(value, job, cur_value=None):
@@ -119,7 +119,11 @@ for section in data[1:]:
                 job[name] = value
         elif re.match(r'^ {2,9}\d', line):  # job
             job = OrderedDict()
-            for name, value in zip(job_header, line.split()):
+            # line splits
+            ls_a, ls_b, ls_c = line.split(maxsplit=2)
+            ls_d, ls_e = re.split(r'\s\s+', ls_c, maxsplit=1)
+            line_split = [ls_a, ls_b, ls_d, *ls_e.split()]
+            for name, value in zip(job_header, line_split):
                 job[name] = value.strip()
             sec_jobs.append(job)
         elif re.match(r'^ {25}[^\s]', line):  # continuation of job details
