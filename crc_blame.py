@@ -61,11 +61,13 @@ data = data.split('#' * 79 + '\n' + ' - PENDING JOBS')[0]
 data = data.split('-' * 81)
 
 # header validation
+header = data[0].split()
 expected_header = ['queuename', 'qtype', 'resv/used/tot.', 'load_avg', 'arch',
                    'states']
-header = data[0].split()
+if header[3] == 'np_load':
+    expected_header[3] = header[3]
 assert len(header) == 6, data[0]
-assert header == expected_header
+assert header == expected_header, (header, expected_header)
 
 job_header = ['id', 'priority', 'name', 'user', 'status', 'date', 'time',
               'slots', 'task_id']
