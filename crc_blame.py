@@ -55,8 +55,9 @@ if args.user:
 
 result = subprocess.run(qstat_cmd, capture_output=True)
 data = result.stdout.decode('UTF-8')
-# remove pending jobs
-data = data.split('#' * 79 + '\n' + ' - PENDING JOBS')[0]
+# split off pending jobs
+data, data_pend = data.split('#' * 79 + '\n' + ' - PENDING JOBS')
+data_pend = data_pend.split('PENDING JOBS\n' + '#' * 79)[1]
 # split by section
 data = data.split('-' * 81)
 
@@ -156,6 +157,56 @@ for section in data[1:]:
     jobs.extend(sec_jobs)
 
 
+pend_jobs = []
+is_hard = False
+for line in data_pend.split('\n'):
+    if len(line) < 4:
+        continue
+    if line[4] != ' ':
+        is_hard = False
+        l_split = line.split()
+        user = l_split[3]
+        if len(l_split) == 9:
+            ab = l_split[-1].split('-')
+            if len(ab) == 2:
+                a, b = ab
+                b, step = b.split(':')
+                mult = (int(b) - int(a)) // int(step)
+            else:
+                assert len(ab) == 1, ab
+                mult = len(ab[0].split(','))
+        else:
+            mult = 1
+        pend_jobs.append({
+            'user': user,
+            'tot_gpu': 0,
+            'tot_slots': mult,
+        })
+    if len(line) < 8:
+        continue
+    if line[7] != ' ':
+        line = line.strip()
+        if line.startswith('Requested PE'):
+            smp_mpi, cpu_cnt = line.split(':')[1].strip().split(' ')
+            cpu_cnt = int(cpu_cnt)
+            pend_jobs[-1]['tot_slots'] = cpu_cnt * mult
+        if line.startswith('Hard Resources:'):
+            is_hard = True
+            m = re.search(r'gpu_card=(\d+)', line)
+            if m is not None:
+                n_gpus = int(m.groups()[0])
+                pend_jobs[-1]['tot_gpu'] = n_gpus * mult
+        else:
+            is_hard = False
+    elif is_hard:
+        m = re.search(r'gpu_card=(\d+)', line)
+        if m is not None:
+            n_gpus = int(m.groups()[0])
+            pend_jobs[-1]['tot_gpu'] = n_gpus * mult
+
+df_pend_jobs = pd.DataFrame(pend_jobs)
+
+
 def cast(df, name, type_):
     df.loc[:, name] = df.loc[:, name].astype(type_)
 
@@ -220,6 +271,18 @@ with pd.option_context('display.max_rows', None,
     cast(job_stats, 'tot_gpu', int)
     cast(job_stats, 'tot_slots', int)
 
+    pend_job_stats = []
+    for user, df_u in df_pend_jobs.groupby('user'):
+        row = dict(
+            user=user,
+            tot_slots=df_u['tot_slots'].sum(),
+            tot_gpu=df_u['tot_gpu'].sum(),
+            tot_jobs=len(df_u),
+        )
+        pend_job_stats.append(row)
+
+    pend_job_stats = pd.DataFrame(pend_job_stats)
+
     node_stats = pd.DataFrame()
     node_stats['queuename'] = df_nodes['queuename']
     node_stats['avail_slots'] = (df_nodes['tot'] - df_nodes['used']
@@ -245,6 +308,18 @@ with pd.option_context('display.max_rows', None,
     print(job_stats.sort_values(by=['tot_gpu', 'tot_slots'],
                                 ascending=False).head(args.top_k).reset_index(
                                 drop=True).to_string(index=False))
+
+    print('\nTop {} slots by user (Pending)'.format(args.top_k))
+    print(pend_job_stats.sort_values(
+        by=['tot_slots', 'tot_gpu'],
+        ascending=False).head(args.top_k).reset_index(
+            drop=True).to_string(index=False))
+
+    print('\nTop {} GPUs by user (Pending)'.format(args.top_k))
+    print(pend_job_stats.sort_values(
+        by=['tot_gpu', 'tot_slots'],
+        ascending=False).head(args.top_k).reset_index(
+            drop=True).to_string(index=False))
 
     print('\nTop {} free slots by node ({}/{} free total)'.format(
         args.top_k, node_stats['avail_slots'].sum(),
