@@ -188,6 +188,9 @@ for line in data_pend.split('\n'):
         line = line.strip()
         if line.startswith('Requested PE'):
             smp_mpi, cpu_cnt = line.split(':')[1].strip().split(' ')
+            if '-' in cpu_cnt:
+                # TODO: "smp 16-32" can be a thing...
+                cpu_cnt = cpu_cnt.split('-')[0]
             cpu_cnt = int(cpu_cnt)
             pend_jobs[-1]['tot_slots'] = cpu_cnt * mult
         if line.startswith('Hard Resources:'):
@@ -222,10 +225,15 @@ if args.queue is not None:
         map(str.strip, result.stdout.decode('UTF-8').split())
         if not q.startswith('@')
     ]
+    df_jobs_cols_orig = df_jobs.columns
     df_jobs = df_jobs.loc[df_jobs['master_queue'].apply(
         lambda x: x.split('@')[1] in relevant_nodes)]
     df_nodes = df_nodes.loc[df_nodes['queuename'].apply(
         lambda x: x.split('@')[1] in relevant_nodes)]
+    print(df_jobs)
+    if df_jobs.empty:
+        df_jobs.columns = df_jobs_cols_orig
+        print(df_jobs)
 
 cast(df_nodes, 'used', float)
 cast(df_nodes, 'resv', float)
