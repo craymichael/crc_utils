@@ -162,7 +162,8 @@ is_hard = False
 for line in data_pend.split('\n'):
     if len(line) < 4:
         continue
-    if line[4] != ' ':
+    # if line[4] != ' ':
+    if line[:7] != ' ' * 7:
         is_hard = False
         l_split = line.split()
         user = l_split[3]
