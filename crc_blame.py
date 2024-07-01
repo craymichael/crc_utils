@@ -168,14 +168,17 @@ for line in data_pend.split('\n'):
         l_split = line.split()
         user = l_split[3]
         if len(l_split) == 9:
-            ab = l_split[-1].split('-')
-            if len(ab) == 2:
-                a, b = ab
-                b, step = b.split(':')
-                mult = (int(b) - int(a)) // int(step)
-            else:
-                assert len(ab) == 1, ab
-                mult = len(ab[0].split(','))
+            job_ranges = l_split[-1].split(',')
+            mult = 0
+            for j_range in job_ranges:
+                ab = j_range.split('-')
+                if len(ab) == 2:
+                    a, b = ab
+                    b, step = b.split(':')
+                    mult += (int(b) - int(a)) // int(step)
+                else:
+                    assert len(ab) == 1, ab
+                    mult += 1
         else:
             mult = 1
         pend_jobs.append({
